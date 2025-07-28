@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Trash2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 type GalleryItemProps = {
   poem: Poem;
