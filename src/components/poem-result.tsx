@@ -5,16 +5,21 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Share2, BookOpen } from 'lucide-react';
+import { Share2, BookOpen, Music4, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AudioPlayer from '@/components/audio-player';
+
 
 type PoemResultProps = {
   poem: string | null;
   imagePreview: string | null;
   isLoading: boolean;
+  audioDataUri: string | null;
+  isNarrating: boolean;
+  onNarrate: () => void;
 };
 
-export default function PoemResult({ poem, imagePreview, isLoading }: PoemResultProps) {
+export default function PoemResult({ poem, imagePreview, isLoading, audioDataUri, isNarrating, onNarrate }: PoemResultProps) {
   const { toast } = useToast();
   
   const shareOnTwitter = () => {
@@ -48,9 +53,26 @@ export default function PoemResult({ poem, imagePreview, isLoading }: PoemResult
   return (
     <Card className="shadow-md animate-in fade-in-50 slide-in-from-bottom-10 duration-500">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-headline">
-          <BookOpen className="text-accent" />
-          Poetic Vision
+        <CardTitle className="flex items-center justify-between gap-2 font-headline">
+          <div className="flex items-center gap-2">
+            <BookOpen className="text-accent" />
+            Poetic Vision
+          </div>
+          {poem && !isLoading && (
+            <Button onClick={onNarrate} disabled={isNarrating} variant="outline" size="sm">
+              {isNarrating ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Music4 className="mr-2 h-4 w-4" />
+                  Listen to Poem
+                </>
+              )}
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -87,6 +109,7 @@ export default function PoemResult({ poem, imagePreview, isLoading }: PoemResult
           )}
         </div>
       </CardContent>
+      {audioDataUri && <AudioPlayer audioDataUri={audioDataUri} />}
       {poem && !isLoading && (
         <CardFooter className="flex justify-end gap-2 flex-wrap">
             <Button variant="outline" onClick={shareOnTwitter}>

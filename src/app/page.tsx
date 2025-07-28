@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { generatePoemFromImage } from '@/ai/flows/generate-poem-from-image';
 import { generateCaptionFromImage } from '@/ai/flows/generate-caption-from-image';
+import { narratePoem } from '@/ai/flows/narrate-poem';
 import type { GenerateCaptionFromImageOutput } from '@/ai/flows/generate-caption-from-image';
 import PhotoUploader from '@/components/photo-uploader';
 import PoemResult from '@/components/poem-result';
@@ -18,6 +19,8 @@ import { Sparkles, Wand2 } from 'lucide-react';
 export default function PhotoPoetPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [poem, setPoem] = useState<string | null>(null);
+  const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
+  const [isNarrating, setIsNarrating] = useState(false);
   const [captions, setCaptions] = useState<GenerateCaptionFromImageOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -32,9 +35,37 @@ export default function PhotoPoetPage() {
       setImagePreview(reader.result as string);
       setPoem(null);
       setCaptions(null);
+      setAudioDataUri(null);
     };
     reader.readAsDataURL(file);
   };
+
+  const handleNarration = async () => {
+    if (!poem) return;
+    setIsNarrating(true);
+    try {
+      const response = await narratePoem(poem);
+      if (response.media) {
+        setAudioDataUri(response.media);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Narration Failed",
+          description: "Could not generate audio for the poem.",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to narrate poem:", error);
+      toast({
+        variant: "destructive",
+        title: "Narration Error",
+        description: "An unexpected error occurred during narration.",
+      });
+    } finally {
+      setIsNarrating(false);
+    }
+  };
+
 
   const handleSubmit = async () => {
     if (!imagePreview) {
@@ -48,6 +79,7 @@ export default function PhotoPoetPage() {
     setIsLoading(true);
     setPoem(null);
     setCaptions(null);
+    setAudioDataUri(null);
     
     try {
       const languagePrompt = `${language} in a ${tone}, ${style} style`;
@@ -166,7 +198,14 @@ export default function PhotoPoetPage() {
             )}
             
             {(poem || isLoading) && (
-              <PoemResult poem={poem} imagePreview={imagePreview} isLoading={isLoading} />
+              <PoemResult 
+                poem={poem} 
+                imagePreview={imagePreview} 
+                isLoading={isLoading}
+                audioDataUri={audioDataUri}
+                isNarrating={isNarrating}
+                onNarrate={handleNarration} 
+              />
             )}
 
             {(captions || isLoading) && (
