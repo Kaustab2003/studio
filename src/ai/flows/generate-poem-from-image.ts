@@ -95,7 +95,6 @@ Photo: {{media url=photoDataUri}}
             threshold: 'BLOCK_NONE',
         },
     ],
-    timeout: 30000,
   }
 });
 
