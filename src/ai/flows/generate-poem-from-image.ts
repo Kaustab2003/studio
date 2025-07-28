@@ -11,7 +11,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import {googleAI} from '@genkit-ai/googleai';
 
 const GeneratePoemFromImageInputSchema = z.object({
@@ -70,6 +70,7 @@ const generatePoemPrompt = ai.definePrompt({
   })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
+  model: googleAI.model('gemini-2.0-flash'),
   prompt: `You are a world-class poet. Analyze the image and its mood, which is '{{{detectedTone}}}'. Write three distinct poems in {{{language}}} inspired by the image.
 Use the getImageElements tool if you need to identify specific objects to incorporate into your poems.
 Return your three poems and the original detected tone.
@@ -93,7 +94,8 @@ Photo: {{media url=photoDataUri}}
             category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
             threshold: 'BLOCK_NONE',
         },
-    ]
+    ],
+    timeout: 30000,
   }
 });
 
@@ -117,21 +119,9 @@ const generatePoemFromImageFlow = ai.defineFlow(
     const detectedTone = moodResponse.output?.mood || 'Reflective'; // Default to 'Reflective' if detection fails
 
     // Then, generate the poem with the detected mood.
-    const {output} = await ai.generate({
-        model: googleAI.model('gemini-2.0-flash'),
-        prompt: generatePoemPrompt.prompt,
-        input: {
-            ...input,
-            detectedTone: detectedTone,
-        },
-        tools: [getImageElements],
-        config: {
-            ...generatePoemPrompt.config,
-            timeout: 30000, // 30 second timeout
-        },
-        output: {
-            schema: GeneratePoemFromImageOutputSchema,
-        }
+    const { output } = await generatePoemPrompt({
+      ...input,
+      detectedTone: detectedTone,
     });
     
     // Ensure the output includes the detected tone, even if the prompt somehow fails to.
