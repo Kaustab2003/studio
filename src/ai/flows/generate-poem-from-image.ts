@@ -70,7 +70,7 @@ const generatePoemPrompt = ai.definePrompt({
   })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
-  model: googleAI.model('gemini-2.0-flash'),
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `You are a world-class poet. Analyze the image and its mood, which is '{{{detectedTone}}}'. Write three distinct poems in {{{language}}} inspired by the image.
 Use the getImageElements tool if you need to identify specific objects to incorporate into your poems.
 Return your three poems and the original detected tone.
@@ -118,7 +118,7 @@ const generatePoemFromImageFlow = ai.defineFlow(
     const detectedTone = moodResponse.output?.mood || 'Reflective'; // Default to 'Reflective' if detection fails
 
     // Then, generate the poem with the detected mood.
-    const { output } = await generatePoemPrompt({
+    const {output} = await generatePoemPrompt({
       ...input,
       detectedTone: detectedTone,
     });
