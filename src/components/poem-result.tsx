@@ -24,9 +24,10 @@ type PoemResultProps = {
   onSave: () => void;
   isSaving: boolean;
   user: User | null;
+  detectedTone: string | null;
 };
 
-export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePreview, isLoading, audioDataUri, isNarrating, onNarrate, onSave, isSaving, user }: PoemResultProps) {
+export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePreview, isLoading, audioDataUri, isNarrating, onNarrate, onSave, isSaving, user, detectedTone }: PoemResultProps) {
   const { toast } = useToast();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
@@ -136,6 +137,11 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
           )}
         </div>
         <div className="space-y-4">
+          {detectedTone && !isLoading && (
+            <div className="text-sm text-center text-muted-foreground italic">
+              Detected Tone: {detectedTone}
+            </div>
+          )}
           {isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-4/5" />

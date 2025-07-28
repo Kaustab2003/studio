@@ -25,6 +25,7 @@ export type GeneratePoemFromImageInput = z.infer<typeof GeneratePoemFromImageInp
 
 const GeneratePoemFromImageOutputSchema = z.object({
   poems: z.array(z.string()).describe('An array of three generated poems.'),
+  detectedTone: z.string().describe('The mood or tone detected from the image.'),
 });
 export type GeneratePoemFromImageOutput = z.infer<typeof GeneratePoemFromImageOutputSchema>;
 
@@ -64,18 +65,29 @@ const generatePoemPrompt = ai.definePrompt({
   input: {schema: z.object({
     photoDataUri: z.string(),
     language: z.string(),
+    detectedTone: z.string(),
   })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
-  prompt: `You are a poet skilled in writing poems in various languages.
-You will be given a photo and a language. Your task is to write three distinct poems inspired by the photo in the given language.
+  prompt: `You are a poet skilled in writing poems in various languages. Your task is to analyze an image, determine its mood, and then write three distinct poems inspired by it.
 
-First, use the getImageElements tool to identify the key elements in the photo.
-Then, craft three beautiful and different poems that incorporate those identified elements. Return them in the 'poems' array.
+1.  **Analyze the image's mood**: The pre-determined mood is '{{{detectedTone}}}'.
+2.  **Identify key elements**: Use the getImageElements tool to find key elements in the photo.
+3.  **Craft three poems**: Write three different poems in the specified language ({{{language}}}). Each poem should reflect the detected mood and incorporate the identified elements.
+4.  **Return the output**: Your response should include the array of three poems and the detectedTone you used.
 
 Language: {{{language}}}
 Photo: {{media url=photoDataUri}}
+Detected Tone: {{{detectedTone}}}
   `,
+});
+
+const detectMoodPrompt = ai.definePrompt({
+    name: 'detectMoodPrompt',
+    input: { schema: z.object({ photoDataUri: z.string() }) },
+    output: { schema: z.object({ mood: z.string().describe('A single word describing the mood, e.g., "Romantic", "Melancholic", "Joyful".') }) },
+    prompt: `Analyze the following image and determine its overall mood or emotional tone. Respond with a single, descriptive word.
+      Image: {{media url=photoDataUri}}`
 });
 
 const generatePoemFromImageFlow = ai.defineFlow(
@@ -85,7 +97,20 @@ const generatePoemFromImageFlow = ai.defineFlow(
     outputSchema: GeneratePoemFromImageOutputSchema,
   },
   async input => {
-    const {output} = await generatePoemPrompt(input);
-    return output!;
+    // First, detect the mood from the image.
+    const moodResponse = await detectMoodPrompt({ photoDataUri: input.photoDataUri });
+    const detectedTone = moodResponse.output?.mood || 'Reflective'; // Default to 'Reflective' if detection fails
+
+    // Then, generate the poem with the detected mood.
+    const {output} = await generatePoemPrompt({
+        ...input,
+        detectedTone: detectedTone,
+    });
+    
+    // Ensure the output includes the detected tone, even if the prompt somehow fails to.
+    return {
+      poems: output?.poems || [],
+      detectedTone: output?.detectedTone || detectedTone,
+    };
   }
 );

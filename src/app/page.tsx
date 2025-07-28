@@ -25,6 +25,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default function PhotoPoetPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [poems, setPoems] = useState<string[] | null>(null);
+  const [detectedTone, setDetectedTone] = useState<string | null>(null);
   const [selectedPoem, setSelectedPoem] = useState<string | null>(null);
   const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
   const [isNarrating, setIsNarrating] = useState(false);
@@ -36,7 +37,6 @@ export default function PhotoPoetPage() {
 
   const [language, setLanguage] = useState('English');
   const [style, setStyle] = useState('Free Verse');
-  const [tone, setTone] = useState('Reflective');
   
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
@@ -46,6 +46,7 @@ export default function PhotoPoetPage() {
       setSelectedPoem(null);
       setCaptions(null);
       setAudioDataUri(null);
+      setDetectedTone(null);
     };
     reader.readAsDataURL(file);
   };
@@ -77,7 +78,7 @@ export default function PhotoPoetPage() {
   };
 
   const handleSaveToJournal = async () => {
-    if (!user || !selectedPoem || !imagePreview) {
+    if (!user || !selectedPoem || !imagePreview || !detectedTone) {
         toast({
             variant: "destructive",
             title: "Cannot Save",
@@ -99,7 +100,7 @@ export default function PhotoPoetPage() {
             imageUrl: imageUrl,
             language: language,
             style: style,
-            tone: tone,
+            tone: detectedTone,
             createdAt: serverTimestamp(),
         });
 
@@ -133,9 +134,10 @@ export default function PhotoPoetPage() {
     setSelectedPoem(null);
     setCaptions(null);
     setAudioDataUri(null);
+    setDetectedTone(null);
     
     try {
-      const languagePrompt = `${language} in a ${tone}, ${style} style`;
+      const languagePrompt = `${language} in a ${style} style`;
       
       const [poemResponse, captionResponse] = await Promise.all([
         generatePoemFromImage({ photoDataUri: imagePreview, language: languagePrompt }),
@@ -144,6 +146,7 @@ export default function PhotoPoetPage() {
 
       setPoems(poemResponse.poems);
       setSelectedPoem(poemResponse.poems[0]);
+      setDetectedTone(poemResponse.detectedTone);
       setCaptions(captionResponse);
 
     } catch (error) {
@@ -181,7 +184,7 @@ export default function PhotoPoetPage() {
                 </CardTitle>
                 <CardDescription>Refine the AI's creative direction.</CardDescription>
               </CardHeader>
-              <CardContent className="grid sm:grid-cols-3 gap-4">
+              <CardContent className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="language">Language</Label>
                   <Select value={language} onValueChange={setLanguage}>
@@ -210,20 +213,6 @@ export default function PhotoPoetPage() {
                       <SelectItem value="Haiku">Haiku</SelectItem>
                       <SelectItem value="Sonnet">Sonnet</SelectItem>
                       <SelectItem value="Limerick">Limerick</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tone">Tone</Label>
-                  <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger id="tone" className="w-full">
-                      <SelectValue placeholder="Select tone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Reflective">Reflective</SelectItem>
-                      <SelectItem value="Romantic">Romantic</SelectItem>
-                      <SelectItem value="Humorous">Humorous</SelectItem>
-                      <SelectItem value="Melancholic">Melancholic</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -269,6 +258,7 @@ export default function PhotoPoetPage() {
                 onSave={handleSaveToJournal}
                 isSaving={isSaving}
                 user={user}
+                detectedTone={detectedTone}
               />
             )}
 
