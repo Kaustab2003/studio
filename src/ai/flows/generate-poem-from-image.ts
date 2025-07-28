@@ -69,17 +69,31 @@ const generatePoemPrompt = ai.definePrompt({
   })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
-  prompt: `You are a poet skilled in writing poems in various languages. Your task is to analyze an image, determine its mood, and then write three distinct poems inspired by it.
-
-1.  **Analyze the image's mood**: The pre-determined mood is '{{{detectedTone}}}'.
-2.  **Identify key elements**: Use the getImageElements tool to find key elements in the photo.
-3.  **Craft three poems**: Write three different poems in the specified language ({{{language}}}). Each poem should reflect the detected mood and incorporate the identified elements.
-4.  **Return the output**: Your response should include the array of three poems and the detectedTone you used.
-
-Language: {{{language}}}
+  prompt: `You are a world-class poet. Analyze the image and its mood, which is '{{{detectedTone}}}'. Write three distinct poems in {{{language}}} inspired by the image.
+Use the getImageElements tool if you need to identify specific objects to incorporate into your poems.
+Return your three poems and the original detected tone.
 Photo: {{media url=photoDataUri}}
-Detected Tone: {{{detectedTone}}}
   `,
+  config: {
+    safetySettings: [
+        {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+        },
+        {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_NONE',
+        },
+        {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_NONE',
+        },
+        {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_NONE',
+        },
+    ]
+  }
 });
 
 const detectMoodPrompt = ai.definePrompt({
