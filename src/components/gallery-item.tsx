@@ -41,7 +41,7 @@ export default function GalleryItem({ poem }: GalleryItemProps) {
     <Card className="flex flex-col">
       <CardHeader>
         <div className="relative w-full aspect-square rounded-lg overflow-hidden">
-            <Image src={poem.imageUrl} alt="Poem image" layout="fill" objectFit="cover" />
+            <Image src={poem.imageUrl} alt="Poem image" fill style={{objectFit: "cover"}} />
         </div>
       </CardHeader>
       <CardContent className="flex-grow">

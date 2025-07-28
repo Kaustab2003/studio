@@ -217,8 +217,8 @@ export default function PoemResult({ poems, selectedPoem, translatedPoem, onPoem
                 <Image
                     src={imagePreview}
                     alt="Source for poem"
-                    layout="fill"
-                    objectFit="cover"
+                    fill
+                    style={{objectFit: "cover"}}
                     data-ai-hint="user image"
                     crossOrigin="anonymous"
                 />

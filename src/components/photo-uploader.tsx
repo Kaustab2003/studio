@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, type DragEvent } from 'react';
@@ -65,8 +66,8 @@ export default function PhotoUploader({ onImageUpload, imagePreview }: PhotoUplo
               <Image
                 src={imagePreview}
                 alt="Uploaded preview"
-                layout="fill"
-                objectFit="contain"
+                fill
+                style={{objectFit: "contain"}}
                 className="rounded-lg p-2"
                 data-ai-hint="user image"
               />
