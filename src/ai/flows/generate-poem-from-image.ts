@@ -12,6 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 const GeneratePoemFromImageInputSchema = z.object({
   photoDataUri: z
@@ -116,9 +117,21 @@ const generatePoemFromImageFlow = ai.defineFlow(
     const detectedTone = moodResponse.output?.mood || 'Reflective'; // Default to 'Reflective' if detection fails
 
     // Then, generate the poem with the detected mood.
-    const {output} = await generatePoemPrompt({
-        ...input,
-        detectedTone: detectedTone,
+    const {output} = await ai.generate({
+        model: googleAI.model('gemini-2.0-flash'),
+        prompt: generatePoemPrompt.prompt,
+        input: {
+            ...input,
+            detectedTone: detectedTone,
+        },
+        tools: [getImageElements],
+        config: {
+            ...generatePoemPrompt.config,
+            timeout: 30000, // 30 second timeout
+        },
+        output: {
+            schema: GeneratePoemFromImageOutputSchema,
+        }
     });
     
     // Ensure the output includes the detected tone, even if the prompt somehow fails to.
