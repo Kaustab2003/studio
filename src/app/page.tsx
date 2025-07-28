@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { generatePoemFromImage } from '@/ai/flows/generate-poem-from-image';
 import { generateCaptionFromImage } from '@/ai/flows/generate-caption-from-image';
 import { narratePoem } from '@/ai/flows/narrate-poem';
+import { translatePoem } from '@/ai/flows/translate-poem';
 import type { GenerateCaptionFromImageOutput } from '@/ai/flows/generate-caption-from-image';
 import PhotoUploader from '@/components/photo-uploader';
 import PoemResult from '@/components/poem-result';
@@ -27,8 +28,10 @@ export default function PhotoPoetPage() {
   const [poems, setPoems] = useState<string[] | null>(null);
   const [detectedTone, setDetectedTone] = useState<string | null>(null);
   const [selectedPoem, setSelectedPoem] = useState<string | null>(null);
+  const [translatedPoem, setTranslatedPoem] = useState<string | null>(null);
   const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
   const [isNarrating, setIsNarrating] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [captions, setCaptions] = useState<GenerateCaptionFromImageOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,24 +41,31 @@ export default function PhotoPoetPage() {
   const [language, setLanguage] = useState('English');
   const [style, setStyle] = useState('Free Verse');
   
+  const resetResults = () => {
+    setPoems(null);
+    setSelectedPoem(null);
+    setCaptions(null);
+    setAudioDataUri(null);
+    setDetectedTone(null);
+    setTranslatedPoem(null);
+  }
+  
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
-      setPoems(null);
-      setSelectedPoem(null);
-      setCaptions(null);
-      setAudioDataUri(null);
-      setDetectedTone(null);
+      resetResults();
     };
     reader.readAsDataURL(file);
   };
 
   const handleNarration = async () => {
-    if (!selectedPoem) return;
+    const poemToNarrate = translatedPoem || selectedPoem;
+    if (!poemToNarrate) return;
+
     setIsNarrating(true);
     try {
-      const response = await narratePoem(selectedPoem);
+      const response = await narratePoem(poemToNarrate);
       if (response.media) {
         setAudioDataUri(response.media);
       } else {
@@ -77,8 +87,32 @@ export default function PhotoPoetPage() {
     }
   };
 
+  const handleTranslation = async () => {
+    if(!selectedPoem) return;
+    setIsTranslating(true);
+    setAudioDataUri(null);
+    try {
+        const response = await translatePoem({ poem: selectedPoem, language });
+        setTranslatedPoem(response.translatedPoem);
+        toast({
+            title: "Poem Translated!",
+            description: `The poem has been translated to ${language}. You can now listen to the new version.`,
+        });
+    } catch(error) {
+        console.error("Failed to translate poem:", error);
+        toast({
+            variant: "destructive",
+            title: "Translation Error",
+            description: "An unexpected error occurred during translation.",
+        });
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
   const handleSaveToJournal = async () => {
-    if (!user || !selectedPoem || !imagePreview || !detectedTone) {
+    const poemToSave = translatedPoem || selectedPoem;
+    if (!user || !poemToSave || !imagePreview || !detectedTone) {
         toast({
             variant: "destructive",
             title: "Cannot Save",
@@ -96,7 +130,7 @@ export default function PhotoPoetPage() {
         // 2. Save poem data to Firestore
         await addDoc(collection(db, "poems"), {
             userId: user.uid,
-            poem: selectedPoem,
+            poem: poemToSave,
             imageUrl: imageUrl,
             language: language,
             style: style,
@@ -130,11 +164,7 @@ export default function PhotoPoetPage() {
       return;
     }
     setIsLoading(true);
-    setPoems(null);
-    setSelectedPoem(null);
-    setCaptions(null);
-    setAudioDataUri(null);
-    setDetectedTone(null);
+    resetResults();
     
     try {
       const languagePrompt = `${language} in a ${style} style`;
@@ -164,7 +194,14 @@ export default function PhotoPoetPage() {
   const handlePoemSelection = (poem: string) => {
     setSelectedPoem(poem);
     setAudioDataUri(null);
+    setTranslatedPoem(null);
   }
+
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    setTranslatedPoem(null);
+    setAudioDataUri(null);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-body text-foreground">
@@ -187,7 +224,7 @@ export default function PhotoPoetPage() {
               <CardContent className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="language">Language</Label>
-                  <Select value={language} onValueChange={setLanguage}>
+                  <Select value={language} onValueChange={handleLanguageChange}>
                     <SelectTrigger id="language" className="w-full">
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>
@@ -249,12 +286,15 @@ export default function PhotoPoetPage() {
               <PoemResult 
                 poems={poems}
                 selectedPoem={selectedPoem}
+                translatedPoem={translatedPoem}
                 onPoemSelect={handlePoemSelection}
                 imagePreview={imagePreview} 
                 isLoading={isLoading}
                 audioDataUri={audioDataUri}
                 isNarrating={isNarrating}
+                isTranslating={isTranslating}
                 onNarrate={handleNarration}
+                onTranslate={handleTranslation}
                 onSave={handleSaveToJournal}
                 isSaving={isSaving}
                 user={user}
