@@ -19,6 +19,7 @@ const GenerateCaptionFromImageInputSchema = z.object({
     .describe(
       "A photo to generate social media captions from, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  language: z.string().describe('The language for the captions to be generated in.'),
 });
 export type GenerateCaptionFromImageInput = z.infer<typeof GenerateCaptionFromImageInputSchema>;
 
@@ -39,7 +40,7 @@ const prompt = ai.definePrompt({
   name: 'generateCaptionFromImagePrompt',
   input: {schema: GenerateCaptionFromImageInputSchema},
   output: {schema: GenerateCaptionFromImageOutputSchema},
-  prompt: `You are a social media expert.  Given the following image, generate captions appropriate for Instagram, Facebook, and Twitter.  Be concise and engaging.\n\nImage: {{media url=photoDataUri}}`,
+  prompt: `You are a social media expert.  Given the following image, generate captions appropriate for Instagram, Facebook, and Twitter in the following language: {{{language}}}.  Be concise and engaging.\n\nImage: {{media url=photoDataUri}}`,
 });
 
 const generateCaptionFromImageFlow = ai.defineFlow(

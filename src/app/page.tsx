@@ -54,7 +54,7 @@ export default function PhotoPoetPage() {
       
       const [poemResponse, captionResponse] = await Promise.all([
         generatePoemFromImage({ photoDataUri: imagePreview, language: languagePrompt }),
-        generateCaptionFromImage({ photoDataUri: imagePreview }),
+        generateCaptionFromImage({ photoDataUri: imagePreview, language: language }),
       ]);
 
       setPoem(poemResponse.poem);
