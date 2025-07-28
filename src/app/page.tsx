@@ -1,3 +1,180 @@
-export default function Home() {
-  return <></>;
+'use client';
+
+import { useState } from 'react';
+import { generatePoemFromImage } from '@/ai/flows/generate-poem-from-image';
+import { generateCaptionFromImage } from '@/ai/flows/generate-caption-from-image';
+import type { GenerateCaptionFromImageOutput } from '@/ai/flows/generate-caption-from-image';
+import PhotoUploader from '@/components/photo-uploader';
+import PoemResult from '@/components/poem-result';
+import CaptionResult from '@/components/caption-result';
+import Header from '@/components/header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Sparkles, Wand2 } from 'lucide-react';
+
+export default function PhotoPoetPage() {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [poem, setPoem] = useState<string | null>(null);
+  const [captions, setCaptions] = useState<GenerateCaptionFromImageOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const [language, setLanguage] = useState('English');
+  const [style, setStyle] = useState('Free Verse');
+  const [tone, setTone] = useState('Reflective');
+  
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+      setPoem(null);
+      setCaptions(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!imagePreview) {
+      toast({
+        variant: "destructive",
+        title: "No Photo Selected",
+        description: "Please upload a photo to generate a poem.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    setPoem(null);
+    setCaptions(null);
+    
+    try {
+      const languagePrompt = `${language} in a ${tone}, ${style} style`;
+      
+      const [poemResponse, captionResponse] = await Promise.all([
+        generatePoemFromImage({ photoDataUri: imagePreview, language: languagePrompt }),
+        generateCaptionFromImage({ photoDataUri: imagePreview }),
+      ]);
+
+      setPoem(poemResponse.poem);
+      setCaptions(captionResponse);
+
+    } catch (error) {
+      console.error("Failed to generate content:", error);
+      toast({
+        variant: "destructive",
+        title: "Generation Failed",
+        description: "There was an error generating the content. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background font-body text-foreground">
+      <Header />
+      <main className="flex-1 p-4 sm:p-6 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          
+          {/* Left Column: Controls */}
+          <div className="flex flex-col gap-6 animate-in fade-in-50 slide-in-from-bottom-10 duration-500">
+            <PhotoUploader onImageUpload={handleImageUpload} imagePreview={imagePreview} />
+
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                  <Wand2 className="text-accent" />
+                  Customize Your Poem
+                </CardTitle>
+                <CardDescription>Refine the AI's creative direction.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger id="language" className="w-full">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Spanish">Spanish</SelectItem>
+                      <SelectItem value="French">French</SelectItem>
+                      <SelectItem value="German">German</SelectItem>
+                      <SelectItem value="Hindi">Hindi</SelectItem>
+                      <SelectItem value="Bengali">Bengali</SelectItem>
+                      <SelectItem value="Japanese">Japanese</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="style">Style</Label>
+                  <Select value={style} onValueChange={setStyle}>
+                    <SelectTrigger id="style" className="w-full">
+                      <SelectValue placeholder="Select style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Free Verse">Free Verse</SelectItem>
+                      <SelectItem value="Haiku">Haiku</SelectItem>
+                      <SelectItem value="Sonnet">Sonnet</SelectItem>
+                      <SelectItem value="Limerick">Limerick</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tone">Tone</Label>
+                  <Select value={tone} onValueChange={setTone}>
+                    <SelectTrigger id="tone" className="w-full">
+                      <SelectValue placeholder="Select tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Reflective">Reflective</SelectItem>
+                      <SelectItem value="Romantic">Romantic</SelectItem>
+                      <SelectItem value="Humorous">Humorous</SelectItem>
+                      <SelectItem value="Melancholic">Melancholic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button onClick={handleSubmit} disabled={isLoading || !imagePreview} size="lg" className="w-full font-bold text-lg shadow-lg">
+              {isLoading ? (
+                <>
+                  <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Generate Poem & Captions
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Right Column: Results */}
+          <div className="flex flex-col gap-6">
+            {!isLoading && !poem && !captions && (
+              <Card className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8 border-dashed border-2 animate-in fade-in-50 duration-500">
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-headline text-muted-foreground">Your masterpiece awaits</h2>
+                  <p className="text-muted-foreground">Upload a photo and let our AI craft a unique poem and captions for you.</p>
+                </div>
+              </Card>
+            )}
+            
+            {(poem || isLoading) && (
+              <PoemResult poem={poem} imagePreview={imagePreview} isLoading={isLoading} />
+            )}
+
+            {(captions || isLoading) && (
+               <CaptionResult captions={captions} isLoading={isLoading} />
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
