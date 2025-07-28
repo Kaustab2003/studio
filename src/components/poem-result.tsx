@@ -5,11 +5,12 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Share2, BookOpen, Music4, LoaderCircle } from 'lucide-react';
+import { Share2, BookOpen, Music4, LoaderCircle, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AudioPlayer from '@/components/audio-player';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import { useEffect, useState } from 'react';
+import type { User } from 'firebase/auth';
 
 type PoemResultProps = {
   poems: string[] | null;
@@ -20,9 +21,12 @@ type PoemResultProps = {
   audioDataUri: string | null;
   isNarrating: boolean;
   onNarrate: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+  user: User | null;
 };
 
-export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePreview, isLoading, audioDataUri, isNarrating, onNarrate }: PoemResultProps) {
+export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePreview, isLoading, audioDataUri, isNarrating, onNarrate, onSave, isSaving, user }: PoemResultProps) {
   const { toast } = useToast();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
@@ -81,21 +85,38 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
             <BookOpen className="text-accent" />
             Poetic Vision
           </div>
-          {selectedPoem && !isLoading && (
-            <Button onClick={onNarrate} disabled={isNarrating} variant="outline" size="sm">
-              {isNarrating ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Music4 className="mr-2 h-4 w-4" />
-                  Listen to Poem
-                </>
-              )}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {selectedPoem && !isLoading && user && (
+              <Button onClick={onSave} disabled={isSaving} variant="outline" size="sm">
+                {isSaving ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save to Journal
+                  </>
+                )}
+              </Button>
+            )}
+            {selectedPoem && !isLoading && (
+              <Button onClick={onNarrate} disabled={isNarrating} variant="outline" size="sm">
+                {isNarrating ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Music4 className="mr-2 h-4 w-4" />
+                    Listen to Poem
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">

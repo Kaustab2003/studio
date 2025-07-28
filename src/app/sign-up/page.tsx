@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Feather } from 'lucide-react';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
@@ -29,16 +31,23 @@ export default function SignUpPage() {
       return;
     }
     setIsLoading(true);
-    // This is where Firebase authentication logic will go.
-    // For now, we'll simulate a successful sign-up.
-     setTimeout(() => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
       toast({
         title: "Account Created!",
         description: "You've been signed in.",
       });
       router.push('/gallery');
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

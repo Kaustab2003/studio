@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Feather } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -21,16 +23,23 @@ export default function SignInPage() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // This is where Firebase authentication logic will go.
-    // For now, we'll simulate a successful login.
-    setTimeout(() => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Signed In Successfully",
         description: "Welcome back!",
       });
       router.push('/gallery');
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

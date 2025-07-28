@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Sparkles, Wand2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { db, storage } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function PhotoPoetPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -22,9 +28,11 @@ export default function PhotoPoetPage() {
   const [selectedPoem, setSelectedPoem] = useState<string | null>(null);
   const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
   const [isNarrating, setIsNarrating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [captions, setCaptions] = useState<GenerateCaptionFromImageOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [language, setLanguage] = useState('English');
   const [style, setStyle] = useState('Free Verse');
@@ -68,6 +76,48 @@ export default function PhotoPoetPage() {
     }
   };
 
+  const handleSaveToJournal = async () => {
+    if (!user || !selectedPoem || !imagePreview) {
+        toast({
+            variant: "destructive",
+            title: "Cannot Save",
+            description: "You must be signed in and have a poem generated to save.",
+        });
+        return;
+    }
+    setIsSaving(true);
+    try {
+        // 1. Upload image to Firebase Storage
+        const imageRef = ref(storage, `poems/${user.uid}/${uuidv4()}`);
+        const uploadResult = await uploadString(imageRef, imagePreview, 'data_url');
+        const imageUrl = await getDownloadURL(uploadResult.ref);
+
+        // 2. Save poem data to Firestore
+        await addDoc(collection(db, "poems"), {
+            userId: user.uid,
+            poem: selectedPoem,
+            imageUrl: imageUrl,
+            language: language,
+            style: style,
+            tone: tone,
+            createdAt: serverTimestamp(),
+        });
+
+        toast({
+            title: "Poem Saved!",
+            description: "Your poem has been saved to your personal journal.",
+        });
+    } catch (error) {
+        console.error("Error saving poem:", error);
+        toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: "An unexpected error occurred while saving your poem.",
+        });
+    } finally {
+        setIsSaving(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!imagePreview) {
@@ -189,7 +239,7 @@ export default function PhotoPoetPage() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate Poem & Captions
+                  Generate Poem &amp; Captions
                 </>
               )}
             </Button>
@@ -215,7 +265,10 @@ export default function PhotoPoetPage() {
                 isLoading={isLoading}
                 audioDataUri={audioDataUri}
                 isNarrating={isNarrating}
-                onNarrate={handleNarration} 
+                onNarrate={handleNarration}
+                onSave={handleSaveToJournal}
+                isSaving={isSaving}
+                user={user}
               />
             )}
 
