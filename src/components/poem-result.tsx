@@ -5,12 +5,15 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Share2, BookOpen, Music4, LoaderCircle, Save } from 'lucide-react';
+import { Share2, BookOpen, Music4, LoaderCircle, Save, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AudioPlayer from '@/components/audio-player';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { User } from 'firebase/auth';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type PoemResultProps = {
   poems: string[] | null;
@@ -31,7 +34,8 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
   const { toast } = useToast();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
-  
+  const posterRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!carouselApi) {
       return
@@ -47,6 +51,53 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
       }
     })
   }, [carouselApi, poems, onPoemSelect])
+
+  const handleDownload = async (format: 'png' | 'jpeg' | 'pdf') => {
+    if (!posterRef.current) {
+        toast({ variant: "destructive", title: "Download Failed", description: "Could not find the poster element." });
+        return;
+    }
+
+    try {
+        const canvas = await html2canvas(posterRef.current, { 
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: window.getComputedStyle(document.body).getPropertyValue('background-color'),
+            onclone: (document) => {
+                // On the cloned document, find the poster element and make it visible for capture
+                const posterElement = document.getElementById(posterRef.current!.id);
+                if (posterElement) {
+                    posterElement.style.color = window.getComputedStyle(document.documentElement).getPropertyValue('--foreground');
+                }
+            }
+        });
+
+        if (format === 'pdf') {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save('photo-poem.pdf');
+        } else {
+            const image = canvas.toDataURL(`image/${format}`, 1.0);
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `photo-poem.${format}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        toast({ title: "Download Started", description: `Your poster is being downloaded as a ${format.toUpperCase()} file.` });
+
+    } catch (error) {
+        console.error("Download error: ", error);
+        toast({ variant: "destructive", title: "Download Failed", description: "An error occurred while generating the poster." });
+    }
+  };
+
 
   const shareOnTwitter = () => {
     if (!selectedPoem) return;
@@ -87,6 +138,21 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
             Poetic Vision
           </div>
           <div className="flex items-center gap-2">
+            {selectedPoem && !isLoading && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleDownload('png')}>PNG</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownload('jpeg')}>JPG</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownload('pdf')}>PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {selectedPoem && !isLoading && user && (
               <Button onClick={onSave} disabled={isSaving} variant="outline" size="sm">
                 {isSaving ? (
@@ -120,60 +186,63 @@ export default function PoemResult({ poems, selectedPoem, onPoemSelect, imagePre
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-lg">
-          {isLoading && !imagePreview ? (
-            <Skeleton className="h-full w-full" />
-          ) : (
-            imagePreview && (
-              <Image
-                src={imagePreview}
-                alt="Source for poem"
-                layout="fill"
-                objectFit="cover"
-                data-ai-hint="user image"
-              />
-            )
-          )}
-        </div>
-        <div className="space-y-4">
-          {detectedTone && !isLoading && (
-            <div className="text-sm text-center text-muted-foreground italic">
-              Detected Tone: {detectedTone}
+      <CardContent>
+        <div id="poster-container" ref={posterRef} className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-lg">
+            {isLoading && !imagePreview ? (
+                <Skeleton className="h-full w-full" />
+            ) : (
+                imagePreview && (
+                <Image
+                    src={imagePreview}
+                    alt="Source for poem"
+                    layout="fill"
+                    objectFit="cover"
+                    data-ai-hint="user image"
+                    crossOrigin="anonymous"
+                />
+                )
+            )}
             </div>
-          )}
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-4/5" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
+            <div className="space-y-4">
+            {detectedTone && !isLoading && (
+                <div className="text-sm text-center text-muted-foreground italic">
+                Detected Tone: {detectedTone}
+                </div>
+            )}
+            {isLoading ? (
+                <div className="space-y-3">
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                </div>
+            ) : (
+                poems && (
+                <Carousel setApi={setCarouselApi} className="w-full">
+                    <CarouselContent>
+                    {poems.map((poem, index) => (
+                        <CarouselItem key={index}>
+                        <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed italic p-1">
+                            {poem}
+                        </p>
+                        </CarouselItem>
+                    ))}
+                    </CarouselContent>
+                    { poems.length > 1 &&
+                    <>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                        <div className="py-2 text-center text-sm text-muted-foreground">
+                        Poem {current} of {poems.length}
+                        </div>
+                    </>
+                    }
+                </Carousel>
+                )
+            )}
             </div>
-          ) : (
-            poems && (
-              <Carousel setApi={setCarouselApi} className="w-full">
-                <CarouselContent>
-                  {poems.map((poem, index) => (
-                    <CarouselItem key={index}>
-                      <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed italic p-1">
-                        {poem}
-                      </p>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                { poems.length > 1 &&
-                  <>
-                    <CarouselPrevious />
-                    <CarouselNext />
-                    <div className="py-2 text-center text-sm text-muted-foreground">
-                      Poem {current} of {poems.length}
-                    </div>
-                  </>
-                }
-              </Carousel>
-            )
-          )}
         </div>
       </CardContent>
       {audioDataUri && <AudioPlayer audioDataUri={audioDataUri} />}
