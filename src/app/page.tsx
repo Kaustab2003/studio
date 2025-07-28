@@ -72,7 +72,7 @@ export default function PhotoPoetPage() {
         toast({
           variant: "destructive",
           title: "Narration Failed",
-          description: "Could not generate audio for the poem.",
+          description: "Could not generate audio for the poem. Please try again later.",
         });
       }
     } catch (error) {
@@ -80,7 +80,7 @@ export default function PhotoPoetPage() {
       toast({
         variant: "destructive",
         title: "Narration Error",
-        description: "An unexpected error occurred during narration.",
+        description: "An unexpected error occurred while generating audio. Please check your connection and try again.",
       });
     } finally {
       setIsNarrating(false);
@@ -103,7 +103,7 @@ export default function PhotoPoetPage() {
         toast({
             variant: "destructive",
             title: "Translation Error",
-            description: "An unexpected error occurred during translation.",
+            description: "An unexpected error occurred during translation. Please check the language and try again.",
         });
     } finally {
         setIsTranslating(false);
@@ -112,11 +112,19 @@ export default function PhotoPoetPage() {
 
   const handleSaveToJournal = async () => {
     const poemToSave = translatedPoem || selectedPoem;
-    if (!user || !poemToSave || !imagePreview || !detectedTone) {
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Sign In Required",
+            description: "Please sign in or create an account to save poems to your journal.",
+        });
+        return;
+    }
+     if (!poemToSave || !imagePreview || !detectedTone) {
         toast({
             variant: "destructive",
             title: "Cannot Save",
-            description: "You must be signed in and have a poem generated to save.",
+            description: "A poem, image, and detected tone must be present to save.",
         });
         return;
     }
@@ -140,14 +148,14 @@ export default function PhotoPoetPage() {
 
         toast({
             title: "Poem Saved!",
-            description: "Your poem has been saved to your personal journal.",
+            description: "Your poem has been successfully saved to your personal journal.",
         });
     } catch (error) {
         console.error("Error saving poem:", error);
         toast({
             variant: "destructive",
             title: "Save Failed",
-            description: "An unexpected error occurred while saving your poem.",
+            description: "An unexpected error occurred while saving your poem. Please try again later.",
         });
     } finally {
         setIsSaving(false);
@@ -174,9 +182,14 @@ export default function PhotoPoetPage() {
         generateCaptionFromImage({ photoDataUri: imagePreview, language: language }),
       ]);
 
-      setPoems(poemResponse.poems);
-      setSelectedPoem(poemResponse.poems[0]);
-      setDetectedTone(poemResponse.detectedTone);
+      if (poemResponse.poems && poemResponse.poems.length > 0) {
+        setPoems(poemResponse.poems);
+        setSelectedPoem(poemResponse.poems[0]);
+        setDetectedTone(poemResponse.detectedTone);
+      } else {
+        throw new Error("Poem generation returned no results.");
+      }
+      
       setCaptions(captionResponse);
 
     } catch (error) {
@@ -184,7 +197,7 @@ export default function PhotoPoetPage() {
       toast({
         variant: "destructive",
         title: "Generation Failed",
-        description: "There was an error generating the content. Please try again.",
+        description: "The AI failed to generate content for your image. This can happen with certain images. Please try a different photo.",
       });
     } finally {
       setIsLoading(false);

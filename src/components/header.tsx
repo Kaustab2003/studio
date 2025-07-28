@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Feather, User, LogOut } from 'lucide-react';
+import { Feather, User, LogOut, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
@@ -27,6 +27,12 @@ export default function Header() {
             </h1>
         </Link>
         <div className="flex items-center gap-2">
+            <Button asChild variant="ghost">
+                <Link href="/about">
+                    <Info className="mr-2" />
+                    About
+                </Link>
+            </Button>
            {!loading && user ? (
              <>
                <Button asChild variant="ghost">
