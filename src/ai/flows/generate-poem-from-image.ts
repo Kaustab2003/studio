@@ -41,10 +41,18 @@ const getImageElements = ai.defineTool({
   outputSchema: z.array(z.string()).describe('An array of key elements found in the image.'),
 },
 async (input) => {
-  // Placeholder implementation.  In a real application, this would use an
-  // image analysis service to identify elements in the image.
-  // For now, return some dummy data.
-  return ['tree', 'sun', 'birds'];
+  // In a real application, this would use an image analysis service.
+  // For now, we'll use a prompt to have the LLM identify the elements.
+  const identifyPrompt = ai.definePrompt({
+    name: 'identifyImageElements',
+    input: { schema: z.object({ photoDataUri: z.string() }) },
+    output: { schema: z.object({ elements: z.array(z.string()) }) },
+    prompt: `Analyze the following image and list up to 5 key elements you see.
+    Image: {{media url=photoDataUri}}`
+  });
+  
+  const { output } = await identifyPrompt({photoDataUri: input.photoDataUri});
+  return output?.elements || [];
 });
 
 export async function generatePoemFromImage(input: GeneratePoemFromImageInput): Promise<GeneratePoemFromImageOutput> {
@@ -53,17 +61,20 @@ export async function generatePoemFromImage(input: GeneratePoemFromImageInput): 
 
 const generatePoemPrompt = ai.definePrompt({
   name: 'generatePoemPrompt',
-  input: {schema: GeneratePoemFromImageInputSchema},
+  input: {schema: z.object({
+    photoDataUri: z.string(),
+    language: z.string(),
+  })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
   prompt: `You are a poet skilled in writing poems in various languages.
-  You will be given a photo and a language, and you will write a poem inspired by the photo in the given language.
+You will be given a photo and a language. Your task is to write a poem inspired by the photo in the given language.
 
-  If the user specifies that certain elements from the image should be included, use the getImageElements tool to identify those elements.
-  Incorporate those identified elements in the poem.
+First, use the getImageElements tool to identify the key elements in the photo.
+Then, craft a beautiful poem that incorporates those identified elements.
 
-  Language: {{{language}}}
-  Photo: {{media url=photoDataUri}}
+Language: {{{language}}}
+Photo: {{media url=photoDataUri}}
   `,
 });
 
