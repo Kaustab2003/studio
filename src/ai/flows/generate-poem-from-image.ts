@@ -24,7 +24,7 @@ const GeneratePoemFromImageInputSchema = z.object({
 export type GeneratePoemFromImageInput = z.infer<typeof GeneratePoemFromImageInputSchema>;
 
 const GeneratePoemFromImageOutputSchema = z.object({
-  poem: z.string().describe('The generated poem.'),
+  poems: z.array(z.string()).describe('An array of three generated poems.'),
 });
 export type GeneratePoemFromImageOutput = z.infer<typeof GeneratePoemFromImageOutputSchema>;
 
@@ -68,10 +68,10 @@ const generatePoemPrompt = ai.definePrompt({
   output: {schema: GeneratePoemFromImageOutputSchema},
   tools: [getImageElements],
   prompt: `You are a poet skilled in writing poems in various languages.
-You will be given a photo and a language. Your task is to write a poem inspired by the photo in the given language.
+You will be given a photo and a language. Your task is to write three distinct poems inspired by the photo in the given language.
 
 First, use the getImageElements tool to identify the key elements in the photo.
-Then, craft a beautiful poem that incorporates those identified elements.
+Then, craft three beautiful and different poems that incorporate those identified elements. Return them in the 'poems' array.
 
 Language: {{{language}}}
 Photo: {{media url=photoDataUri}}

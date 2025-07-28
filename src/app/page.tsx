@@ -18,7 +18,8 @@ import { Sparkles, Wand2 } from 'lucide-react';
 
 export default function PhotoPoetPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [poem, setPoem] = useState<string | null>(null);
+  const [poems, setPoems] = useState<string[] | null>(null);
+  const [selectedPoem, setSelectedPoem] = useState<string | null>(null);
   const [audioDataUri, setAudioDataUri] = useState<string | null>(null);
   const [isNarrating, setIsNarrating] = useState(false);
   const [captions, setCaptions] = useState<GenerateCaptionFromImageOutput | null>(null);
@@ -33,7 +34,8 @@ export default function PhotoPoetPage() {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
-      setPoem(null);
+      setPoems(null);
+      setSelectedPoem(null);
       setCaptions(null);
       setAudioDataUri(null);
     };
@@ -41,10 +43,10 @@ export default function PhotoPoetPage() {
   };
 
   const handleNarration = async () => {
-    if (!poem) return;
+    if (!selectedPoem) return;
     setIsNarrating(true);
     try {
-      const response = await narratePoem(poem);
+      const response = await narratePoem(selectedPoem);
       if (response.media) {
         setAudioDataUri(response.media);
       } else {
@@ -77,7 +79,8 @@ export default function PhotoPoetPage() {
       return;
     }
     setIsLoading(true);
-    setPoem(null);
+    setPoems(null);
+    setSelectedPoem(null);
     setCaptions(null);
     setAudioDataUri(null);
     
@@ -89,7 +92,8 @@ export default function PhotoPoetPage() {
         generateCaptionFromImage({ photoDataUri: imagePreview, language: language }),
       ]);
 
-      setPoem(poemResponse.poem);
+      setPoems(poemResponse.poems);
+      setSelectedPoem(poemResponse.poems[0]);
       setCaptions(captionResponse);
 
     } catch (error) {
@@ -103,6 +107,11 @@ export default function PhotoPoetPage() {
       setIsLoading(false);
     }
   };
+
+  const handlePoemSelection = (poem: string) => {
+    setSelectedPoem(poem);
+    setAudioDataUri(null);
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-body text-foreground">
@@ -188,7 +197,7 @@ export default function PhotoPoetPage() {
 
           {/* Right Column: Results */}
           <div className="flex flex-col gap-6">
-            {!isLoading && !poem && !captions && (
+            {!isLoading && !poems && !captions && (
               <Card className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8 border-dashed border-2 animate-in fade-in-50 duration-500">
                 <div className="space-y-4">
                   <h2 className="text-2xl font-headline text-muted-foreground">Your masterpiece awaits</h2>
@@ -197,9 +206,11 @@ export default function PhotoPoetPage() {
               </Card>
             )}
             
-            {(poem || isLoading) && (
+            {(poems || isLoading) && (
               <PoemResult 
-                poem={poem} 
+                poems={poems}
+                selectedPoem={selectedPoem}
+                onPoemSelect={handlePoemSelection}
                 imagePreview={imagePreview} 
                 isLoading={isLoading}
                 audioDataUri={audioDataUri}
